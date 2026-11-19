@@ -4,22 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>상세페이지 자동 생성기</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
-body{font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;margin:0;background:#0E0E0D;color:#EDEDEA}
+body{font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;margin:0;background:#F5F0E8;color:#3B3028}
 #ai,#aiwarn,#aiok{display:none!important}
 h3{font-size:15px;letter-spacing:-.2px}
 .wrap{max-width:1280px;margin:0 auto;padding:20px;display:grid;grid-template-columns:360px 1fr;gap:20px}
 @media(max-width:960px){.wrap{grid-template-columns:1fr}}
-.panel{background:#161615;border-radius:0;padding:20px;border:1px solid #2a2a28;color:#EDEDEA}
+.panel{background:#FFFDF8;border-radius:0;padding:20px;border:1px solid #E3D9C6;color:#3B3028}
 .wrap>*{min-width:0}
-#out{background:#0E0E0D;border:1px dashed #2a2a28;color:#9a9a95;height:110px!important}
+#out{background:#FBF7F0;border:1px dashed #DCD2BF;color:#6B5D4F;height:110px!important}
 label{display:block;font-size:13px;font-weight:600;margin:12px 0 4px}
-input,textarea,select{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #2a2a28;border-radius:10px;font:inherit;background:#0E0E0D;color:#EDEDEA;transition:border-color .15s}
-input:focus,textarea:focus,select:focus{outline:none;border-color:#EDEDEA}
-label{color:#c9c9c4}
+input,textarea,select{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #DCD2BF;border-radius:10px;font:inherit;background:#FFFFFF;color:#3B3028;transition:border-color .15s}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#8B6F56}
+label{color:#5A4D40}
 input[type=file]{padding:6px;font-size:12px}
 textarea{min-height:52px;resize:vertical}
-button{padding:12px 14px;border:0;border-radius:999px;background:#EDEDEA;color:#0E0E0D;font-weight:800;font-size:15px;cursor:pointer;margin-top:14px;width:100%}
+button{padding:12px 14px;border:0;border-radius:999px;background:#3B3028;color:#F5F0E8;font-weight:800;font-size:15px;cursor:pointer;margin-top:14px;width:100%}
 button:hover{filter:brightness(1.05)}
 button.sub{background:#e9e9ee;color:#222}
 button:disabled{opacity:.4;cursor:not-allowed}
@@ -70,11 +71,12 @@ th{width:32%;font-weight:600;opacity:.85}
 </style>
 </head>
 <body>
-<div style="max-width:1280px;margin:0 auto;padding:16px 20px 0"><a href="home.html" style="font-size:14px;font-weight:700;color:#3a5bd9;text-decoration:none">← 메인으로</a></div>
+<div style="max-width:1280px;margin:0 auto;padding:16px 20px 0"><a href="home.html" style="font-size:14px;font-weight:700;color:#8B6F56;text-decoration:none">← 메인으로</a></div>
 <div class="wrap">
   <div class="panel">
     <h3 style="margin:0 0 4px">상품 사진 (1장)</h3>
     <input id="photo" type="file" accept="image/*">
+    <button id="delphoto" class="sub" style="margin-top:8px">대표 사진 지우기</button>
     <div class="hint">사진 한 장으로 색, 커버 사진, 포인트 사진, 디테일 컷이 자동으로 채워집니다.</div>
 
     <h3 style="margin:18px 0 4px">상품 정보</h3>
@@ -112,6 +114,8 @@ th{width:32%;font-weight:600;opacity:.85}
     <textarea id="options" placeholder="베이지:#d8c3a5&#10;블랙:#222222"></textarea>
     <label>옵션별 사진 (옵션 순서대로 한 장씩)</label>
     <input id="optphoto" type="file" accept="image/*" multiple>
+    <button id="deloptphotos" class="sub" style="margin-top:8px">옵션 사진 전부 지우기</button>
+    <div class="hint">썸네일을 클릭하면 그 사진만 지워집니다.</div>
     <div class="thumbs" id="optthumbs"></div>
     <div class="hint">옵션 사진이 없는 옵션은 상품 사진의 일부로 대신 채워집니다.</div>
 
@@ -184,6 +188,21 @@ function readAsUrl(f) {
   return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
 }
 
+function renderThumbs() {
+  const box = $('optthumbs'); box.innerHTML = '';
+  S.optPhotos.forEach((u, i) => {
+    const im = document.createElement('img');
+    im.src = u; im.title = '클릭하면 삭제'; im.style.cursor = 'pointer';
+    im.addEventListener('click', () => { S.optPhotos.splice(i, 1); renderThumbs(); });
+    box.appendChild(im);
+  });
+}
+$('delphoto').addEventListener('click', () => {
+  $('photo').value = ''; S.photo = null; S.crops = []; S.accent = '#8b6f56';
+});
+$('deloptphotos').addEventListener('click', () => {
+  $('optphoto').value = ''; S.optPhotos = []; renderThumbs();
+});
 $('photo').addEventListener('change', async e => {
   const f = e.target.files[0]; if (!f) return;
   const img = await loadImg(await readAsUrl(f));
@@ -197,8 +216,7 @@ $('optphoto').addEventListener('change', async e => {
   for (const f of [...e.target.files].slice(0, 14)) {
     S.optPhotos.push(shrinkImg(await loadImg(await readAsUrl(f))));
   }
-  const box = $('optthumbs'); box.innerHTML = '';
-  S.optPhotos.forEach(u => { const im = document.createElement('img'); im.src = u; box.appendChild(im); });
+  renderThumbs();
 });
 
 $('ai').addEventListener('click', async () => {
@@ -242,7 +260,8 @@ function buildPage(d) {
   }).join('');
   const detail = S.crops.map(u => '<div style="background-image:url(' + u + ')"></div>').join('');
   const specs = lines($('specs').value).map(s => { const p = s.split(':'); const k = p.shift(); return '<tr><th>' + esc(k.trim()) + '</th><td>' + esc(p.join(':').trim()) + '</td></tr>'; }).join('');
-  const opts = parseOptions();
+  let opts = parseOptions();
+  if (!opts.length && S.optPhotos.length) opts = S.optPhotos.map((_, i) => ({ name: '옵션 ' + (i + 1), hex: S.accent }));
   const optGrid = opts.map((o, i) => {
     const img = S.optPhotos[i] || S.crops[i % S.crops.length] || S.photo;
     return '<div class="opt"><div class="img" style="background-image:url(' + img + ')"></div><div class="name"><span class="dot" style="background:' + o.hex + '"></span>' + esc(o.name) + '</div></div>';
@@ -251,6 +270,7 @@ function buildPage(d) {
   const notes = lines($('notes').value).map(n => '<li>' + esc(n) + '</li>').join('');
   const bigWord = ($('keywords').value.trim().split(/\s+/)[0] || d.name).slice(0, 10);
   return '<div class="cover"><div class="big">' + esc(bigWord) + '</div>' + cover + '<div class="eyebrow">' + esc(S.aiHeadline || d.name) + '</div><h1>' + esc(d.name) + '</h1><div class="sub">' + esc(d.tagline) + '</div></div>'
+    + (d.price ? '<div class="bar">' + esc(d.price) + '</div>' : '')
     + (d.memo ? '<div class="intro"><p>' + esc(d.memo) + '</p></div>' : '')
     + (points ? '<div class="points">' + points + '</div>' : '')
     + (detail ? '<div class="detail"><h2>DETAIL</h2><div class="detailgrid">' + detail + '</div></div>' : '')
@@ -259,7 +279,7 @@ function buildPage(d) {
     + (opts.length ? '<div class="sec"><h2>OPTION</h2><div class="optgrid">' + optGrid + '</div></div>' : '')
     + (usage ? '<div class="sec"><h2>HOW TO USE</h2><ol class="steps">' + usage + '</ol></div>' : '')
     + (notes ? '<div class="small"><strong>주의사항</strong><ul>' + notes + '</ul></div>' : '')
-    + '<div class="bar">' + esc(d.price || '') + '</div>';
+    ;
 }
 function setVars(page) {
   const c = $('concept').value;
@@ -287,6 +307,7 @@ $('gen').addEventListener('click', () => {
   const page = document.createElement('div');
   page.className = 'page';
   page.innerHTML = buildPage(d);
+  page.insertAdjacentHTML('beforeend', '<div class="dlbar" style="display:flex;gap:10px;padding:18px 30px;background:#ffffff;border-top:1px solid #e5e5e5"><button class="dlpng" style="flex:1;margin:0;background:#111;color:#fff">PNG 다운로드</button><button class="dljpg" style="flex:1;margin:0;background:#111;color:#fff">JPG 다운로드</button></div>');
   setVars(page);
   $('preview').replaceWith(page);
   page.id = 'preview';
@@ -295,10 +316,27 @@ $('gen').addEventListener('click', () => {
   makeOutput();
 });
 
+function saveImage(kind) {
+  const page = $('preview');
+  if (!page.classList.contains('page')) { alert('먼저 상세페이지 만들기를 눌러 주세요.'); return; }
+  if (typeof html2canvas === 'undefined') { alert('이미지 저장 도구를 불러오지 못했습니다. 인터넷 연결을 확인하세요.'); return; }
+  html2canvas(page, { scale: 2, backgroundColor: '#ffffff', useCORS: true, ignoreElements: el => el.classList && el.classList.contains('dlbar') }).then(canvas => {
+    const a = document.createElement('a');
+    const base = ($('name').value.trim() || 'detail-page').replace(/[\\/:*?"<>|]/g, '_');
+    a.download = base + (kind === 'jpg' ? '.jpg' : '.png');
+    a.href = kind === 'jpg' ? canvas.toDataURL('image/jpeg', 0.92) : canvas.toDataURL('image/png');
+    a.click();
+  });
+}
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('dlpng')) saveImage('png');
+  if (e.target.classList.contains('dljpg')) saveImage('jpg');
+});
 function makeOutput() {
   const page = $('preview'); if (!page || !page.classList.contains('page')) return;
   const clone = page.cloneNode(true);
   clone.querySelectorAll('[contenteditable]').forEach(e => e.removeAttribute('contenteditable'));
+  clone.querySelectorAll('.dlbar').forEach(e => e.remove());
   clone.removeAttribute('id');
   $('out').value = '<style>' + css + '</style>\n' + clone.outerHTML;
 }
