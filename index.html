@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>상세페이지 자동 생성기</title>
+<style>
+body{font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;margin:0;background:#0E0E0D;color:#EDEDEA}
+#ai,#aiwarn,#aiok{display:none!important}
+h3{font-size:15px;letter-spacing:-.2px}
+.wrap{max-width:1280px;margin:0 auto;padding:20px;display:grid;grid-template-columns:360px 1fr;gap:20px}
+@media(max-width:960px){.wrap{grid-template-columns:1fr}}
+.panel{background:#161615;border-radius:0;padding:20px;border:1px solid #2a2a28;color:#EDEDEA}
+.wrap>*{min-width:0}
+#out{background:#0E0E0D;border:1px dashed #2a2a28;color:#9a9a95;height:110px!important}
+label{display:block;font-size:13px;font-weight:600;margin:12px 0 4px}
+input,textarea,select{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid #2a2a28;border-radius:10px;font:inherit;background:#0E0E0D;color:#EDEDEA;transition:border-color .15s}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#EDEDEA}
+label{color:#c9c9c4}
+input[type=file]{padding:6px;font-size:12px}
+textarea{min-height:52px;resize:vertical}
+button{padding:12px 14px;border:0;border-radius:999px;background:#EDEDEA;color:#0E0E0D;font-weight:800;font-size:15px;cursor:pointer;margin-top:14px;width:100%}
+button:hover{filter:brightness(1.05)}
+button.sub{background:#e9e9ee;color:#222}
+button:disabled{opacity:.4;cursor:not-allowed}
+.hint{font-size:12px;color:#777;margin-top:6px}
+.warn{background:#fff4e5;border-radius:8px;padding:8px 10px;font-size:13px;margin-top:10px;display:none}
+.ok{background:#e8f6ec;border-radius:8px;padding:8px 10px;font-size:13px;margin-top:10px;display:none}
+.check-box label{display:flex;gap:6px;font-weight:500;margin:6px 0}
+.check-box input{width:auto}
+.thumbs img{width:48px;height:48px;object-fit:cover;border-radius:6px;margin:4px 4px 0 0}
+
+/* ===== 상세페이지 템플릿 ===== */
+.page{max-width:720px;margin:0 auto;background:var(--bg);color:var(--ink);font-family:"Malgun Gothic",system-ui,sans-serif;overflow:hidden;border-radius:14px;box-shadow:0 10px 30px rgba(20,30,60,.10)}
+.cover{padding:40px 30px 30px;text-align:center;position:relative;overflow:hidden}
+.cover .big{position:absolute;left:0;right:0;top:50px;font-size:120px;font-weight:900;letter-spacing:-4px;text-transform:uppercase;color:var(--big);white-space:nowrap;pointer-events:none;line-height:1;text-align:center}
+.cover > *:not(.big){position:relative}
+.arch{width:78%;margin:0 auto;aspect-ratio:3/4;background-size:cover;background-position:center;border-radius:300px 300px 0 0}
+.cover .eyebrow{font-size:12px;letter-spacing:4px;text-transform:uppercase;opacity:.7;margin-top:22px}
+.cover h1{font-size:30px;font-weight:700;letter-spacing:-.5px;line-height:1.3;margin:10px 0 12px}
+.cover .sub{font-size:15px;opacity:.85;line-height:1.6}
+.intro{padding:50px 40px;text-align:center;border-top:1px solid var(--line)}
+.intro h2{font-size:22px;margin:0 0 14px;font-weight:700}
+.intro p{font-size:14px;line-height:1.8;opacity:.85;margin:0}
+.points{padding:30px 30px 40px}
+.point{display:grid;grid-template-columns:120px 1fr;gap:18px;align-items:center;padding:18px 0;border-top:1px solid var(--line)}
+.point .img{width:120px;height:120px;border-radius:50%;background-size:cover;background-position:center}
+.point .no{color:var(--accent);font-size:12px;font-weight:700;letter-spacing:2px}
+.point h3{margin:4px 0 6px;font-size:17px}
+.point p{margin:0;font-size:14px;line-height:1.7;opacity:.85}
+.detail{padding:10px 30px 40px}
+.detail h2,.sec h2{text-align:center;font-size:20px;font-weight:700;letter-spacing:.5px;margin:20px 0 22px}
+.detail h2::after,.sec h2::after{content:"";display:block;width:28px;height:2px;background:var(--accent);margin:12px auto 0}
+.detailgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.detailgrid div{aspect-ratio:1;background-size:cover;background-position:center;border-radius:6px}
+.sec{padding:30px 40px;border-top:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{border-bottom:1px solid var(--line);padding:10px 6px;text-align:left}
+th{width:32%;font-weight:600;opacity:.85}
+.optgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.opt .img{aspect-ratio:1;background-size:cover;background-position:center;border-radius:8px}
+.opt .name{font-size:13px;margin-top:6px;display:flex;align-items:center;gap:6px}
+.dot{width:12px;height:12px;border-radius:50%;border:1px solid #bbb;display:inline-block}
+.steps{list-style:none;padding:0;margin:0}
+.steps li{display:flex;gap:12px;padding:10px 0;font-size:14px;line-height:1.6;border-bottom:1px dotted var(--line)}
+.steps li b{color:var(--accent);min-width:24px;font-weight:700}
+.small{font-size:12px;line-height:1.7;opacity:.75;padding:24px 40px}
+.small ul{margin:6px 0 0;padding-left:18px}
+.bar{background:var(--accent);color:#fff;text-align:center;padding:22px;font-weight:700;font-size:18px;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div style="max-width:1280px;margin:0 auto;padding:16px 20px 0"><a href="home.html" style="font-size:14px;font-weight:700;color:#3a5bd9;text-decoration:none">← 메인으로</a></div>
+<div class="wrap">
+  <div class="panel">
+    <h3 style="margin:0 0 4px">상품 사진 (1장)</h3>
+    <input id="photo" type="file" accept="image/*">
+    <div class="hint">사진 한 장으로 색, 커버 사진, 포인트 사진, 디테일 컷이 자동으로 채워집니다.</div>
+
+    <h3 style="margin:18px 0 4px">상품 정보</h3>
+    <label>상품명</label>
+    <input id="name" placeholder="예: 13cm 에코밍크 집게핀">
+    <label>컨셉 (디자인 분위기)</label>
+    <select id="concept">
+      <option value="calm">감성 미니멀 (베이지·세리프)</option>
+      <option value="info">정보형 (남색·사양과 포인트 강조)</option>
+      <option value="bold">강조형 (상품 색을 크게)</option>
+    </select>
+    <label>컨셉 키워드 (문구 방향, 예: 겨울, 포근함, 데일리)</label>
+    <input id="keywords" placeholder="문구가 이 키워드에 맞게 작성됩니다">
+    <label>한 줄 소개</label>
+    <input id="tagline" placeholder="예: 가볍게 꽂기만 해도 완성되는 겨울 헤어">
+    <label>핵심 특징 메모 (AI 문구 작성에 씁니다)</label>
+    <textarea id="memo" placeholder="예: 에코밍크 소재, 한 번에 고정되는 집게 구조"></textarea>
+    <label>추천 대상</label>
+    <input id="target">
+    <label>사양 (항목:값, 줄바꿈 구분)</label>
+    <textarea id="specs" placeholder="크기:13cm&#10;소재:폴리에스터"></textarea>
+    <label>사용 방법 (줄바꿈 구분)</label>
+    <textarea id="usage"></textarea>
+    <label>판매가</label>
+    <input id="price" placeholder="예: 9,900원">
+    <label>주의사항·배송 안내 (줄바꿈 구분)</label>
+    <textarea id="notes"></textarea>
+
+    <button id="ai" class="sub">AI로 문구 채우기</button>
+    <div id="aiwarn" class="warn"></div>
+    <div id="aiok" class="ok"></div>
+
+    <h3 style="margin:18px 0 4px">옵션 (색상·디자인별)</h3>
+    <label>옵션 목록 (한 줄에 하나: 옵션명:#헥스코드)</label>
+    <textarea id="options" placeholder="베이지:#d8c3a5&#10;블랙:#222222"></textarea>
+    <label>옵션별 사진 (옵션 순서대로 한 장씩)</label>
+    <input id="optphoto" type="file" accept="image/*" multiple>
+    <div class="thumbs" id="optthumbs"></div>
+    <div class="hint">옵션 사진이 없는 옵션은 상품 사진의 일부로 대신 채워집니다.</div>
+
+    <button id="gen">상세페이지 만들기</button>
+    <div id="warn" class="warn"></div>
+  </div>
+
+  <div>
+    <div class="page" id="preview" style="background:#fff;border-radius:12px">
+      <div style="padding:40px;text-align:center;color:#888">사진을 넣고 정보를 입력한 뒤 '상세페이지 만들기'를 누르세요.</div>
+    </div>
+    <div class="panel" style="margin-top:12px">
+      <strong>실물 확인 체크리스트</strong>
+      <div class="check-box">
+        <label><input type="checkbox" class="ck"> 제품 형태가 실물과 같습니다</label>
+        <label><input type="checkbox" class="ck"> 색상이 실물과 같습니다</label>
+        <label><input type="checkbox" class="ck"> 소재 질감이 실물과 같습니다</label>
+        <label><input type="checkbox" class="ck"> 사이즈 표기가 맞습니다</label>
+        <label><input type="checkbox" class="ck"> AI 문구에 사실과 다른 내용이 없습니다</label>
+        <label><input type="checkbox" class="ck"> 과장 표현이 없습니다</label>
+      </div>
+      <button id="copy" class="sub" disabled>HTML 코드 복사 (체크리스트 완료 후 활성화)</button>
+      <textarea id="out" style="height:80px;margin-top:10px;font-size:12px" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const BANNED = ['최고', '100%', '완치', '무조건', '세계 1위', '부작용 없음', '즉시 효과', '영구'];
+const css = document.querySelector('style').textContent;
+const S = { photo: null, crops: [], accent: '#8b6f56', optPhotos: [], aiFeatures: [], aiHeadline: '', html: '' };
+
+const esc = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const lines = t => t.split('\n').map(s => s.trim()).filter(Boolean);
+const loadImg = url => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+const hexToRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const toHex = a => '#' + a.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+
+function shrinkImg(img) {
+  const s = Math.min(1, 1000 / img.width);
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.85);
+}
+function dominant(img) {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+  const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, 64, 64);
+  const px = ctx.getImageData(0, 0, 64, 64).data, b = {};
+  for (let i = 0; i < px.length; i += 4) {
+    const r = px[i], g = px[i + 1], bl = px[i + 2];
+    if (Math.max(r, g, bl) < 40 || Math.min(r, g, bl) > 215) continue;
+    const k = ((r >> 5) << 6) | ((g >> 5) << 3) | (bl >> 5);
+    const o = b[k] || (b[k] = { n: 0, r: 0, g: 0, b: 0 });
+    o.n++; o.r += r; o.g += g; o.b += bl;
+  }
+  let best = null;
+  Object.values(b).forEach(o => { if (!best || o.n > best.n) best = o; });
+  return best ? toHex([best.r / best.n, best.g / best.n, best.b / best.n]) : '#8b6f56';
+}
+function crop(img, fx, fy, fw, fh) {
+  const sw = Math.round(img.naturalWidth * fw), sh = Math.round(img.naturalHeight * fh);
+  const c = document.createElement('canvas'); const s = Math.min(1, 800 / sw);
+  c.width = Math.round(sw * s); c.height = Math.round(sh * s);
+  c.getContext('2d').drawImage(img, Math.round(img.naturalWidth * fx), Math.round(img.naturalHeight * fy), sw, sh, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.85);
+}
+function readAsUrl(f) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+}
+
+$('photo').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const img = await loadImg(await readAsUrl(f));
+  S.photo = shrinkImg(img);
+  S.accent = dominant(img);
+  S.crops = [crop(img, 0, 0, .5, .5), crop(img, .25, .25, .5, .5), crop(img, .5, .5, .5, .5), crop(img, .3, .3, .4, .4)];
+});
+
+$('optphoto').addEventListener('change', async e => {
+  S.optPhotos = [];
+  for (const f of [...e.target.files].slice(0, 14)) {
+    S.optPhotos.push(shrinkImg(await loadImg(await readAsUrl(f))));
+  }
+  const box = $('optthumbs'); box.innerHTML = '';
+  S.optPhotos.forEach(u => { const im = document.createElement('img'); im.src = u; box.appendChild(im); });
+});
+
+$('ai').addEventListener('click', async () => {
+  const w = $('aiwarn'), ok = $('aiok');
+  w.style.display = 'none'; ok.style.display = 'none';
+  $('ai').disabled = true; $('ai').textContent = 'AI가 문구를 만드는 중...';
+  try {
+    const r = await fetch('/api/copy', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: $('name').value, memo: $('memo').value, target: $('target').value, specs: $('specs').value, concept: $('concept').value, keywords: $('keywords').value })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || '오류');
+    $('tagline').value = data.tagline || '';
+    $('usage').value = (data.usage || []).join('\n');
+    S.aiFeatures = Array.isArray(data.features) ? data.features : [];
+    S.aiHeadline = data.headline || '';
+    ok.style.display = 'block'; ok.textContent = 'AI 문구를 채웠습니다. 실물과 맞는지 확인하고 수정해 주세요.';
+  } catch (err) {
+    w.style.display = 'block';
+    w.textContent = 'AI 문구 생성 실패: ' + err.message + ' (서버 실행과 .env 설정을 확인하세요)';
+  } finally {
+    $('ai').disabled = false; $('ai').textContent = 'AI로 문구 채우기';
+  }
+});
+
+function parseOptions() {
+  const parsed = lines($('options').value).map(l => {
+    const p = l.split(':'); const name = p.shift().trim();
+    return { name, hex: p.join(':').trim() || S.accent };
+  });
+  return parsed;
+}
+function buildPage(d) {
+  const aiF = Array.isArray(S.aiFeatures) ? S.aiFeatures : [];
+  const feats = (aiF.length ? aiF : lines($('memo').value)).slice(0, 3);
+  const cover = S.photo ? '<div class="arch" style="background-image:url(' + S.photo + ')"></div>' : '';
+  const points = feats.map((f, i) => {
+    const img = S.crops[i % S.crops.length] || S.photo;
+    return '<div class="point"><div class="img" style="background-image:url(' + img + ')"></div><div><div class="no">0' + (i + 1) + '</div><h3>' + esc(f.split(/[,.]/)[0].slice(0, 20)) + '</h3><p>' + esc(f) + '</p></div></div>';
+  }).join('');
+  const detail = S.crops.map(u => '<div style="background-image:url(' + u + ')"></div>').join('');
+  const specs = lines($('specs').value).map(s => { const p = s.split(':'); const k = p.shift(); return '<tr><th>' + esc(k.trim()) + '</th><td>' + esc(p.join(':').trim()) + '</td></tr>'; }).join('');
+  const opts = parseOptions();
+  const optGrid = opts.map((o, i) => {
+    const img = S.optPhotos[i] || S.crops[i % S.crops.length] || S.photo;
+    return '<div class="opt"><div class="img" style="background-image:url(' + img + ')"></div><div class="name"><span class="dot" style="background:' + o.hex + '"></span>' + esc(o.name) + '</div></div>';
+  }).join('');
+  const usage = lines($('usage').value).map((u, i) => '<li><b>' + (i + 1) + '</b><span>' + esc(u) + '</span></li>').join('');
+  const notes = lines($('notes').value).map(n => '<li>' + esc(n) + '</li>').join('');
+  const bigWord = ($('keywords').value.trim().split(/\s+/)[0] || d.name).slice(0, 10);
+  return '<div class="cover"><div class="big">' + esc(bigWord) + '</div>' + cover + '<div class="eyebrow">' + esc(S.aiHeadline || d.name) + '</div><h1>' + esc(d.name) + '</h1><div class="sub">' + esc(d.tagline) + '</div></div>'
+    + (d.memo ? '<div class="intro"><p>' + esc(d.memo) + '</p></div>' : '')
+    + (points ? '<div class="points">' + points + '</div>' : '')
+    + (detail ? '<div class="detail"><h2>DETAIL</h2><div class="detailgrid">' + detail + '</div></div>' : '')
+    + (d.target ? '<div class="sec"><h2>추천 대상</h2><p style="text-align:center;margin:0">' + esc(d.target) + '</p></div>' : '')
+    + (specs ? '<div class="sec"><h2>SPECIFICATION</h2><table>' + specs + '</table></div>' : '')
+    + (opts.length ? '<div class="sec"><h2>OPTION</h2><div class="optgrid">' + optGrid + '</div></div>' : '')
+    + (usage ? '<div class="sec"><h2>HOW TO USE</h2><ol class="steps">' + usage + '</ol></div>' : '')
+    + (notes ? '<div class="small"><strong>주의사항</strong><ul>' + notes + '</ul></div>' : '')
+    + '<div class="bar">' + esc(d.price || '') + '</div>';
+}
+function setVars(page) {
+  const c = $('concept').value;
+  const P = {
+    calm: { bg: '#f6f1ea', ink: '#3b3028', line: 'rgba(59,48,40,.18)', accent: S.accent },
+    info: { bg: '#f4f6fa', ink: '#1f3a68', line: 'rgba(31,58,104,.18)', accent: '#1f3a68' },
+    bold: { bg: S.accent, ink: '#ffffff', line: 'rgba(255,255,255,.35)', accent: '#1d1d1f' }
+  }[c];
+  page.style.setProperty('--bg', P.bg);
+  page.style.setProperty('--ink', P.ink);
+  page.style.setProperty('--line', P.line);
+  page.style.setProperty('--accent', P.accent);
+  page.style.setProperty('--big', c === 'bold' ? 'rgba(255,255,255,.22)' : c === 'info' ? 'rgba(31,58,104,.08)' : 'rgba(59,48,40,.08)');
+}
+
+$('gen').addEventListener('click', () => {
+  const name = $('name').value.trim();
+  const w = $('warn');
+  if (!name) { w.style.display = 'block'; w.textContent = '상품명을 입력해 주세요.'; return; }
+  const text = [name, $('tagline').value, $('usage').value, $('notes').value, $('memo').value].join(' ');
+  const hits = BANNED.filter(x => text.includes(x));
+  w.style.display = hits.length ? 'block' : 'none';
+  w.textContent = hits.length ? '과장 가능성이 있는 표현: ' + hits.join(', ') : '';
+  const d = { name, tagline: $('tagline').value.trim(), memo: $('memo').value.trim(), target: $('target').value.trim(), price: $('price').value.trim() };
+  const page = document.createElement('div');
+  page.className = 'page';
+  page.innerHTML = buildPage(d);
+  setVars(page);
+  $('preview').replaceWith(page);
+  page.id = 'preview';
+  page.style.borderRadius = '12px';
+  page.querySelectorAll('h1,h2,h3,p,li,td,.sub,.eyebrow,.bar').forEach(el => el.setAttribute('contenteditable', 'true'));
+  makeOutput();
+});
+
+function makeOutput() {
+  const page = $('preview'); if (!page || !page.classList.contains('page')) return;
+  const clone = page.cloneNode(true);
+  clone.querySelectorAll('[contenteditable]').forEach(e => e.removeAttribute('contenteditable'));
+  clone.removeAttribute('id');
+  $('out').value = '<style>' + css + '</style>\n' + clone.outerHTML;
+}
+document.addEventListener('input', e => { if (e.target.closest && e.target.closest('#preview')) makeOutput(); });
+function updateCopy() {
+  const all = [...document.querySelectorAll('.ck')].every(c => c.checked);
+  $('copy').disabled = !all;
+  $('copy').textContent = all ? 'HTML 코드 복사' : 'HTML 코드 복사 (체크리스트 완료 후 활성화)';
+}
+document.querySelectorAll('.ck').forEach(c => c.addEventListener('change', updateCopy));
+$('copy').addEventListener('click', async () => {
+  makeOutput();
+  try { await navigator.clipboard.writeText($('out').value); } catch (e) { $('out').select(); document.execCommand('copy'); }
+  $('copy').textContent = '복사됨';
+  setTimeout(updateCopy, 1500);
+});
+</script>
+</body>
+</html>
